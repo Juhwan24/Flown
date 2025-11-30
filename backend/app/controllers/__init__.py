@@ -1,4 +1,4 @@
-from .search_controller import SearchController
+from .search_controller import router
 
-__all__ = ["SearchController"]
+__all__ = ["router"]
 

@@ -2,7 +2,7 @@
 라우트 템플릿 엔진
 브루트포스를 방지하기 위해 미리 정의된 라우트 패턴을 생성합니다.
 """
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from app.services.flight_graph import FlightGraph
 
 
