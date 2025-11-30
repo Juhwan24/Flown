@@ -24,10 +24,10 @@ cp .env.example .env
 # .env 파일에 API 키 입력
 ```
 
-3. Redis 실행 (선택사항, 캐싱 사용 시):
-```bash
-redis-server
-```
+3. Redis 설정 (선택사항, 캐싱 사용 시):
+   - **Redis 없이도 정상 동작합니다!** (캐싱 없이 API 직접 호출)
+   - Redis 설치 및 설정 방법: [REDIS_SETUP.md](REDIS_SETUP.md) 참고
+   - 간단히 시작: `redis-server` 실행 (설치되어 있는 경우)
 
 4. 애플리케이션 실행:
 ```bash
