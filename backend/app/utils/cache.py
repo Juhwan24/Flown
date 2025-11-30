@@ -42,19 +42,21 @@ class CacheManager:
                 host=settings.redis_host,
                 port=settings.redis_port,
                 db=settings.redis_db,
-                password=settings.redis_password,
+                password=settings.redis_password if settings.redis_password else None,
                 decode_responses=True,
-                socket_connect_timeout=2,  # 2초 타임아웃
-                socket_timeout=2
+                socket_connect_timeout=1,  # 1초 타임아웃 (빠른 실패)
+                socket_timeout=1,
+                retry_on_timeout=False,  # 타임아웃 시 재시도 안 함
+                health_check_interval=30  # 헬스 체크 간격
             )
-            # 연결 테스트
+            # 연결 테스트 (타임아웃 짧게)
             self.redis_client.ping()
-            logger.info(f"Redis 연결 성공: {settings.redis_host}:{settings.redis_port}")
-        except redis.ConnectionError as e:
-            logger.warning(f"Redis 연결 실패: {e}. 캐싱이 비활성화됩니다.")
+            logger.info(f"✅ Redis 연결 성공: {settings.redis_host}:{settings.redis_port}")
+        except (redis.ConnectionError, redis.TimeoutError, TimeoutError, OSError) as e:
+            logger.warning(f"⚠️ Redis 연결 실패: {type(e).__name__} - {e}. 캐싱이 비활성화됩니다.")
             self.redis_client = None
         except Exception as e:
-            logger.warning(f"Redis 초기화 오류: {e}. 캐싱이 비활성화됩니다.")
+            logger.warning(f"⚠️ Redis 초기화 오류: {type(e).__name__} - {e}. 캐싱이 비활성화됩니다.")
             self.redis_client = None
     
     def is_available(self) -> bool:

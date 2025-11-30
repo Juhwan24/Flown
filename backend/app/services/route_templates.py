@@ -2,7 +2,9 @@
 라우트 템플릿 엔진
 브루트포스를 방지하기 위해 미리 정의된 라우트 패턴을 생성합니다.
 """
-from typing import List, Tuple, Optional
+from __future__ import annotations
+
+from typing import List, Optional, Dict, Tuple
 from app.services.flight_graph import FlightGraph
 
 
@@ -11,126 +13,149 @@ class RouteTemplateEngine:
     라우트 템플릿 엔진
     제한된 패턴만 생성하여 조합 폭발을 방지합니다.
     """
-    
+
     def __init__(self, graph: FlightGraph):
         self.graph = graph
-    
+
     def generate_templates(
         self,
         departure: str,
-        destination: str
+        destination: str,
+        allow_two_entries: bool = True,
     ) -> List[List[str]]:
         """
         라우트 템플릿 생성
-        
+
         Args:
             departure: 출발 공항 (예: ICN)
             destination: 최종 목적지 (예: CTS)
-        
+            allow_two_entries: ENTRY 2개 경유(D) 생성 여부
+
         Returns:
-            라우트 템플릿 리스트 (각 템플릿은 공항 코드 리스트)
-        
+            라우트 템플릿 리스트
+
         템플릿 패턴:
-        A: ICN → CTS → ICN (직항)
-        B: ICN → ENTRY → CTS → ICN
-        C: ICN → ENTRY → CTS → EXIT → ICN
-        D: ICN → ENTRY1 → ENTRY2 → CTS → EXIT → ICN (최대 2개 중간 도시)
+        A: DEP → DEST → DEP (직항)
+        B: DEP → ENTRY → DEST → DEP
+        C: DEP → ENTRY → DEST → EXIT → DEP
+        D: DEP → ENTRY1 → ENTRY2 → DEST → EXIT → DEP (ENTRY 2개)
         """
-        templates = []
-        
+        dep = departure.upper()
+        dest = destination.upper()
+
+        templates: List[List[str]] = []
+
+        entries = [e.upper() for e in self.graph.get_entry_airports()]
+        exits = [x.upper() for x in self.graph.get_exit_airports()]
+
         # 템플릿 A: 직항 왕복
-        templates.append([departure, destination, departure])
-        
+        templates.append([dep, dest, dep])
+
         # 템플릿 B: 진입 공항 1개 경유
-        for entry in self.graph.get_entry_airports():
-            templates.append([departure, entry, destination, departure])
-        
+        for entry in entries:
+            if entry == dest:
+                continue
+            templates.append([dep, entry, dest, dep])
+
         # 템플릿 C: 진입 공항 1개, 출구 공항 1개
-        for entry in self.graph.get_entry_airports():
-            for exit in self.graph.get_exit_airports():
-                if entry != exit:  # 같은 공항은 제외
-                    templates.append([departure, entry, destination, exit, departure])
-        
-        # 템플릿 D: 진입 공항 2개 (최대 2개 중간 도시)
-        entry_airports = self.graph.get_entry_airports()
-        for i, entry1 in enumerate(entry_airports):
-            for entry2 in entry_airports[i+1:]:
-                for exit in self.graph.get_exit_airports():
-                    templates.append([
-                        departure,
-                        entry1,
-                        entry2,
-                        destination,
-                        exit,
-                        departure
-                    ])
-        
+        for entry in entries:
+            if entry == dest:
+                continue
+            for exit_ in exits:
+                # ENTRY/EXIT가 같아도 현실적으로 문제는 없지만
+                # 중복 루프를 줄이기 위해 기본은 제외
+                if entry == exit_:
+                    continue
+                templates.append([dep, entry, dest, exit_, dep])
+
+        # 템플릿 D: 진입 공항 2개 (순서 고려!)
+        if allow_two_entries and len(entries) >= 2:
+            for entry1 in entries:
+                if entry1 == dest:
+                    continue
+                for entry2 in entries:
+                    if entry2 == dest or entry2 == entry1:
+                        continue
+                    for exit_ in exits:
+                        templates.append([dep, entry1, entry2, dest, exit_, dep])
+
         return templates
-    
-    def validate_template(self, template: List[str]) -> bool:
+
+    def validate_template(self, template: List[str], destination: Optional[str] = None) -> bool:
         """
         템플릿 유효성 검사
-        
-        - 출발지와 최종 도착지가 일치하는지
+
+        - 출발지와 최종 도착지가 일치하는지(왕복)
         - 중간에 같은 공항이 반복되지 않는지
-        - 최대 중간 도시 수 제한 (2개)
+        - 최대 중간 도시 수 제한
+        - (선택) 목적지가 실제 template에 포함되는지
+
+        NOTE:
+        - 템플릿 C: middle_airports 길이 3
+        - 템플릿 D: middle_airports 길이 4
+          => 기존 코드의 >3 제한 때문에 D가 전부 탈락했음
         """
-        if len(template) < 3:
+        if not template or len(template) < 3:
             return False
-        
-        # 출발지와 최종 도착지가 일치해야 함 (왕복)
-        if template[0] != template[-1]:
+
+        # 왕복 여부
+        if template[0].upper() != template[-1].upper():
             return False
-        
-        # 중간 공항 중복 체크 (출발/도착 제외)
-        middle_airports = template[1:-1]
+
+        middle_airports = [a.upper() for a in template[1:-1]]
+
+        # 중간 공항 중복 금지
         if len(middle_airports) != len(set(middle_airports)):
             return False
-        
-        # 최대 중간 도시 수: 3개 이하 (실제로는 2개 중간 도시 + 목적지)
-        if len(middle_airports) > 3:
+
+        # 최대 중간 도시 수 제한:
+        #   B: 2 (ENTRY, DEST)
+        #   C: 3 (ENTRY, DEST, EXIT)
+        #   D: 4 (ENTRY1, ENTRY2, DEST, EXIT)
+        if len(middle_airports) > 4:
             return False
-        
+
+        # 목적지가 주어지면 포함 여부 확인
+        if destination:
+            dest = destination.upper()
+            if dest not in middle_airports:
+                return False
+
         return True
-    
+
     def expand_template(
         self,
         template: List[str],
-        available_segments: Optional[dict] = None
+        available_segments: Optional[Dict[Tuple[str, str], bool]] = None,
     ) -> List[List[str]]:
         """
         템플릿을 실제 사용 가능한 세그먼트로 확장
-        
+
         Args:
             template: 라우트 템플릿
-            available_segments: 사용 가능한 세그먼트 딕셔너리 {(from, to): bool}
-                              None인 경우 그래프에서 확인
-        
+            available_segments: {(from, to): bool}
+                - None이면 그래프에서 has_edge로 직접 확인
+
         Returns:
-            확장된 라우트 리스트 (유효한 경우만)
+            유효한 경우 [template], 아니면 []
         """
-        # available_segments가 제공되지 않으면 그래프에서 확인
+        if not template or len(template) < 2:
+            return []
+
+        # available_segments가 없으면 그래프에서 확인
         if available_segments is None:
             available_segments = {}
-            # 그래프에서 사용 가능한 세그먼트 확인
-            for i in range(len(template) - 1):
-                from_airport = template[i]
-                to_airport = template[i + 1]
-                # 그래프에 해당 세그먼트가 존재하는지 확인
-                segment = self.graph.get_cheapest_segment(from_airport, to_airport)
-                available_segments[(from_airport, to_airport)] = segment is not None
-        
-        # 템플릿의 모든 세그먼트가 사용 가능한지 확인
-        for i in range(len(template) - 1):
-            from_airport = template[i]
-            to_airport = template[i + 1]
-            segment_key = (from_airport, to_airport)
-            
-            # available_segments에 키가 없거나 False인 경우
-            if not available_segments.get(segment_key, False):
-                # 유효하지 않은 템플릿
-                return []
-        
-        # 모든 세그먼트가 유효함
-        return [template]
 
+            for i in range(len(template) - 1):
+                f = template[i].upper()
+                t = template[i + 1].upper()
+                available_segments[(f, t)] = self.graph.has_edge(f, t)
+
+        # 템플릿의 모든 간선이 존재하는지 확인
+        for i in range(len(template) - 1):
+            f = template[i].upper()
+            t = template[i + 1].upper()
+            if not available_segments.get((f, t), False):
+                return []
+
+        return [template]

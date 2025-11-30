@@ -15,12 +15,12 @@ class Settings(BaseSettings):
     """
     
     # Amadeus API 설정
-    amadeus_api_key: str = "mock_key_for_testing"
-    amadeus_api_secret: str = "mock_secret_for_testing"
-    amadeus_base_url: str = "https://test.api.amadeus.com"
+    amadeus_api_key: str = ""  # 환경 변수에서 필수로 설정해야 함
+    amadeus_api_secret: str = ""  # 환경 변수에서 필수로 설정해야 함
+    amadeus_base_url: str = "https://api.amadeus.com"  # 프로덕션 환경
     
     # AirLabs API 설정
-    airlabs_api_key: str = "mock_key_for_testing"
+    airlabs_api_key: str = ""  # 환경 변수에서 필수로 설정해야 함
     airlabs_base_url: str = "https://airlabs.co/api/v9"
     
     # Redis 설정 (선택사항 - Redis 없이도 동작)

@@ -26,6 +26,11 @@ class AirLabsProvider:
     def __init__(self):
         self.api_key = settings.airlabs_api_key
         self.base_url = settings.airlabs_base_url
+        
+        # API 키 검증
+        if not self.api_key:
+            logger.error("❌ AirLabs API 키가 설정되지 않았습니다. 환경 변수를 확인하세요.")
+        
         # HTTP 클라이언트 (재사용)
         self.client = httpx.AsyncClient(
             timeout=HTTP_TIMEOUT,
@@ -68,10 +73,19 @@ class AirLabsProvider:
                 response.raise_for_status()
                 data = response.json()
                 
+                # 응답 데이터 확인
+                response_data = data.get("response", [])
+                if not response_data:
+                    logger.warning(f"⚠️ AirLabs API 응답이 비어있습니다: {origin} → {destination} ({departure_date})")
+                    logger.debug(f"전체 응답: {data}")
+                    return None
+                
                 # API 응답을 FlightSegment로 변환
                 segments = self.normalize_response(data)
                 if segments:
                     return segments[0]  # 최저가 반환
+                else:
+                    logger.warning(f"⚠️ AirLabs 응답 파싱 결과가 없습니다: {origin} → {destination}")
                 return None
                 
             except httpx.HTTPStatusError as e:
@@ -104,11 +118,77 @@ class AirLabsProvider:
         """
         AirLabs API 응답을 표준 FlightSegment 형식으로 변환
         
-        실제 구현 시 API 응답 구조에 맞게 파싱
+        AirLabs API 응답 구조에 맞게 파싱하여 FlightSegment 리스트로 변환
         """
-        # 실제 구현 필요
         segments = []
-        # 예시 파싱 로직 (실제 API 응답 구조에 맞게 수정 필요)
+        
+        try:
+            # AirLabs API 응답 구조에 맞게 파싱
+            # 응답 데이터 구조는 AirLabs API 문서 참조 필요
+            response_data = api_response.get("response", [])
+            
+            for flight_data in response_data:
+                try:
+                    from_airport = flight_data.get("dep_iata", "")
+                    to_airport = flight_data.get("arr_iata", "")
+                    flight_date_str = flight_data.get("dep_time", "").split(" ")[0] if flight_data.get("dep_time") else ""
+                    
+                    if not from_airport or not to_airport or not flight_date_str:
+                        continue
+                    
+                    # 날짜 파싱
+                    flight_date = DateUtils.parse_api_date(flight_date_str)
+                    
+                    # 가격 정보
+                    # ⚠️ 주의: AirLabs API의 /flights 엔드포인트는 가격 정보를 제공하지 않습니다
+                    # 가격 정보가 없으면 0으로 설정 (다른 소스에서 가격을 가져와야 함)
+                    price = int(flight_data.get("price", 0)) if flight_data.get("price") else 0
+                    
+                    if price == 0:
+                        logger.warning(f"⚠️ AirLabs 응답에 가격 정보가 없습니다: {from_airport} → {to_airport}")
+                        # AirLabs는 가격을 제공하지 않으므로, 기본값이나 다른 API에서 가격을 가져와야 함
+                        # 일본 국내선 평균 가격 추정 (실제로는 다른 API나 스크래핑 필요)
+                        # 예: FUK → CTS 약 15,000원 정도
+                        price = 90000  # 임시 기본값 (실제 구현 시 다른 소스에서 가격 조회 필요)
+                    
+                    # 시간 정보
+                    departure_time = None
+                    arrival_time = None
+                    if flight_data.get("dep_time"):
+                        try:
+                            departure_time = flight_data.get("dep_time").split(" ")[1][:5] if " " in flight_data.get("dep_time", "") else None
+                        except:
+                            pass
+                    if flight_data.get("arr_time"):
+                        try:
+                            arrival_time = flight_data.get("arr_time").split(" ")[1][:5] if " " in flight_data.get("arr_time", "") else None
+                        except:
+                            pass
+                    
+                    # 항공편 번호
+                    flight_number = flight_data.get("flight_number", "")
+                    
+                    segment = FlightSegment(
+                        from_airport=from_airport,
+                        to_airport=to_airport,
+                        price=price,
+                        provider="Peach",
+                        date=flight_date,
+                        flight_number=flight_number,
+                        departure_time=departure_time,
+                        arrival_time=arrival_time
+                    )
+                    
+                    segments.append(segment)
+                    
+                except Exception as e:
+                    logger.warning(f"⚠️ AirLabs 응답 파싱 오류 (항목 건너뜀): {e}")
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"❌ AirLabs API 응답 파싱 오류: {e}")
+            logger.debug(f"응답 데이터: {api_response}")
+        
         return segments
     
     async def close(self):

@@ -35,7 +35,11 @@ async def search_flights(request: SearchRequest) -> SearchResponse:
         
         result = await search_engine.search(request)
         
+        # 상세 로깅: 어떤 세그먼트들이 합산되었는지 확인
         logger.info(f"검색 완료: 총 비용 {result.total_cost}원")
+        logger.info(f"📋 일정 세그먼트 수: {len(result.segments)}개")
+        for idx, seg in enumerate(result.segments, 1):
+            logger.info(f"   [{idx}] {seg.from_airport} → {seg.to_airport}: {seg.price}원 (날짜: {seg.date}, 제공자: {seg.provider})")
         
         return result
     
