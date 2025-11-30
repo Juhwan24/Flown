@@ -39,9 +39,36 @@ class AmadeusProvider:
         # 실제 구현 시 OAuth 2.0 토큰 요청
         # 여기서는 모의 토큰 반환
         if not self.access_token:
+<<<<<<< Updated upstream
             # 실제 API 호출 대신 모의 응답
             logger.info("Amadeus 액세스 토큰 획득 (모의)")
             self.access_token = "mock_access_token"
+=======
+            try:
+                # OAuth 2.0 토큰 요청
+                token_url = "https://test.api.amadeus.com/v1/security/oauth2/token"
+                data = {
+                    "grant_type": "client_credentials",
+                    "client_id": self.api_key,
+                    "client_secret": self.api_secret
+                }
+                
+                response = await self.client.post(token_url, data=data)
+                response.raise_for_status()
+                token_data = response.json()
+                self.access_token = token_data.get("access_token")
+                
+                if self.access_token:
+                    logger.info("✅ Amadeus 액세스 토큰 획득 성공")
+                else:
+                    logger.error("❌ Amadeus 토큰 응답에 access_token이 없습니다")
+                    
+            except httpx.HTTPStatusError as e:
+                logger.error(f"❌ Amadeus 토큰 요청 실패 (HTTP {e.response.status_code}): {e.response.text}")
+            except Exception as e:
+                logger.error(f"❌ Amadeus 토큰 요청 실패: {e}")
+        
+>>>>>>> Stashed changes
         return self.access_token
     
     async def search_flight(
@@ -96,6 +123,7 @@ class AmadeusProvider:
         self,
         origin: str,
         destination: str,
+<<<<<<< Updated upstream
         date: date,
         base_price: int
     ) -> FlightSegment:
@@ -104,6 +132,51 @@ class AmadeusProvider:
         import random
         price_variation = random.randint(-10000, 20000)
         final_price = max(50000, base_price + price_variation)
+=======
+        departure_date: date,
+        return_date: Optional[date] = None
+    ) -> List[FlightSegment]:
+        """실제 Amadeus API 호출"""
+        try:
+            # 액세스 토큰 획득
+            token = await self._get_access_token()
+            if not token:
+                logger.warning("⚠️ Amadeus 액세스 토큰 획득 실패")
+                return []
+            
+            # Flight Offers Search API 호출
+            search_url = "https://test.api.amadeus.com/v2/shopping/flight-offers"
+            date_str = DateUtils.format_date_for_api(departure_date)
+            
+            params = {
+                "originLocationCode": origin,
+                "destinationLocationCode": destination,
+                "departureDate": date_str,
+                "adults": 1,
+                "max": 5  # 최대 5개 결과
+            }
+            
+            if return_date:
+                params["returnDate"] = DateUtils.format_date_for_api(return_date)
+            
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = await self.client.get(search_url, params=params, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            
+            # API 응답을 FlightSegment로 변환
+            segments = self.normalize_response(data)
+            return segments
+            
+        except httpx.HTTPStatusError as e:
+            logger.error(f"❌ Amadeus API 호출 실패 (HTTP {e.response.status_code}): {e.response.text}")
+        except Exception as e:
+            logger.error(f"❌ Amadeus API 호출 오류: {e}")
+>>>>>>> Stashed changes
         
         return FlightSegment(
             from_airport=origin,
