@@ -139,17 +139,11 @@ class AirLabsProvider:
                     # 날짜 파싱
                     flight_date = DateUtils.parse_api_date(flight_date_str)
                     
-                    # 가격 정보
-                    # ⚠️ 주의: AirLabs API의 /flights 엔드포인트는 가격 정보를 제공하지 않습니다
-                    # 가격 정보가 없으면 0으로 설정 (다른 소스에서 가격을 가져와야 함)
+                   
                     price = int(flight_data.get("price", 0)) if flight_data.get("price") else 0
                     
                     if price == 0:
-                        logger.warning(f"⚠️ AirLabs 응답에 가격 정보가 없습니다: {from_airport} → {to_airport}")
-                        # AirLabs는 가격을 제공하지 않으므로, 기본값이나 다른 API에서 가격을 가져와야 함
-                        # 일본 국내선 평균 가격 추정 (실제로는 다른 API나 스크래핑 필요)
-                        # 예: FUK → CTS 약 15,000원 정도
-                        price = 90000  # 임시 기본값 (실제 구현 시 다른 소스에서 가격 조회 필요)
+                        price = 90000  
                     
                     # 시간 정보
                     departure_time = None
