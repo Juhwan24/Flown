@@ -1,8 +1,40 @@
+import { useState } from 'react';
 import { FloatLogo } from './components/FloatLogo';
 import { FlightSearchCard } from './components/FlightSearchCard';
+import { FlightResults } from './components/FlightResults';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
+import { SearchResponse } from './types/flight';
 
 export default function App() {
+  const [searchResult, setSearchResult] = useState<SearchResponse | null>(null);
+  const [searchParams, setSearchParams] = useState<{
+    departure: string;
+    destination: string;
+    startDate: string;
+    endDate: string;
+  } | null>(null);
+
+  const handleSearchResult = (result: SearchResponse, params: {
+    departure: string;
+    destination: string;
+    startDate: string;
+    endDate: string;
+  }) => {
+    setSearchResult(result);
+    setSearchParams(params);
+  };
+
+  const handleBack = () => {
+    setSearchResult(null);
+    setSearchParams(null);
+  };
+
+  // 검색 결과가 있으면 결과 페이지 표시
+  if (searchResult && searchParams) {
+    return <FlightResults result={searchResult} onBack={handleBack} searchParams={searchParams} />;
+  }
+
+  // 검색 페이지
   return (
     <div className="min-h-screen relative">
       {/* Background image */}
@@ -44,12 +76,12 @@ export default function App() {
 
             {/* Search card */}
             <div className="flex justify-center">
-              <FlightSearchCard />
+              <FlightSearchCard 
+                onSearchResult={(result, params) => handleSearchResult(result, params)}
+              />
             </div>
           </div>
         </main>
-
-      
       </div>
     </div>
   );
