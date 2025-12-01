@@ -55,7 +55,6 @@ class AmadeusProvider:
                 }
                 
                 logger.info(f"🔑 토큰 요청: POST {token_url}")
-                logger.debug(f"토큰 요청 데이터: grant_type=client_credentials, client_id={self.api_key[:10]}...")
                 
                 response = await self.client.post(token_url, data=data)
                 
