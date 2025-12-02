@@ -1,6 +1,6 @@
 import { SearchRequest, SearchResponse } from '../types/flight';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://flown-production.up.railway.app/';
 
 export async function searchFlights(request: SearchRequest): Promise<SearchResponse> {
   const response = await fetch(`${API_BASE_URL}/api/search`, {

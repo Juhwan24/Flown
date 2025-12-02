@@ -125,7 +125,7 @@ export function FlightSearchCard({ onSearchResult }: FlightSearchCardProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {/* From */}
         <div className="relative">
-          <label className="block text-sm text-gray-600 mb-2">출발지</label>
+          <label className="block text-sm text-gray-600 mb-2">출국장소</label>
           <AirportSelectPopover
             open={fromPopoverOpen}
             onOpenChange={setFromPopoverOpen}
@@ -149,7 +149,7 @@ export function FlightSearchCard({ onSearchResult }: FlightSearchCardProps) {
 
         {/* To */}
         <div className="relative">
-          <label className="block text-sm text-gray-600 mb-2">도착지</label>
+          <label className="block text-sm text-gray-600 mb-2">입국장소</label>
           <AirportSelectPopover
             open={toPopoverOpen}
             onOpenChange={setToPopoverOpen}
@@ -177,7 +177,7 @@ export function FlightSearchCard({ onSearchResult }: FlightSearchCardProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         {/* Start date */}
         <div className="relative">
-          <label className="block text-sm text-gray-600 mb-2">시작일</label>
+          <label className="block text-sm text-gray-600 mb-2">후보기간</label>
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input
@@ -191,7 +191,7 @@ export function FlightSearchCard({ onSearchResult }: FlightSearchCardProps) {
 
         {/* End date */}
         <div className="relative">
-          <label className="block text-sm text-gray-600 mb-2">종료일</label>
+          <label className="block text-sm text-white mb-2">.</label>
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input
@@ -206,7 +206,7 @@ export function FlightSearchCard({ onSearchResult }: FlightSearchCardProps) {
 
         {/* Trip nights */}
         <div className="relative">
-          <label className="block text-sm text-gray-600 mb-2">여행 기간</label>
+          <label className="block text-sm text-gray-600 mb-2">여행 일자</label>
           <div className="relative">
             <Input
               type="number"
