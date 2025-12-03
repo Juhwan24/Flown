@@ -133,7 +133,7 @@ export function FlightResults({ result, onBack, searchParams }: FlightResultsPro
                 const lastDate = new Date(result.segments[result.segments.length - 1].date);
                 const daysDiff = Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
                 return (
-                  <div className="mb-6 -pb6 border-b border-gray-200">
+                  <div className="mb-6 pb-6 border-b border-gray-200">
                     <h4 className="text-sm font-semibold text-gray-600 mb-3">기간</h4>
                     <p className="text-lg font-medium text-gray-900">
                       {daysDiff}박 {daysDiff + 1}일

@@ -99,9 +99,11 @@ class SearchEngine:
             trip_nights
         )
         candidate_pairs = date_pairs[:5]
+        logger.info(f"📅 날짜 조합 수: {len(candidate_pairs)}개")
 
         for template in templates:
             if not self.template_engine.validate_template(template, destination=dest):
+                logger.debug(f"템플릿 검증 실패: {' → '.join(template)}")
                 continue
 
             # 템플릿 확장 (그래프에 실제 세그먼트가 있는지 확인)
@@ -111,6 +113,9 @@ class SearchEngine:
 
             # 날짜 조합별로 itinerary 구성
             for dep_date, ret_date in candidate_pairs:
+                logger.debug(f"🔍 일정 구성 시도: 템플릿={' → '.join(template)}, 출발일={dep_date}, 귀국일={ret_date}")
+                
+                # 먼저 엄격한 날짜 매칭 시도
                 itinerary = self.price_aggregator.build_itinerary_from_template(
                     template=template,
                     departure_date=dep_date,
@@ -119,6 +124,19 @@ class SearchEngine:
                     allow_same_day_transfer=False,   # 기본: 당일 환승 불허
                     strict_date_match=True,         # 기본: 날짜 엄격 매칭
                 )
+                
+                # 엄격한 매칭 실패 시, 유연한 매칭 시도
+                if not itinerary:
+                    logger.debug(f"엄격한 날짜 매칭 실패, 유연한 매칭 시도: 템플릿={' → '.join(template)}")
+                    itinerary = self.price_aggregator.build_itinerary_from_template(
+                        template=template,
+                        departure_date=dep_date,
+                        return_date=ret_date,
+                        destination=dest,
+                        allow_same_day_transfer=False,
+                        strict_date_match=False,    # 유연한 매칭: 날짜 없을 때 전체 최저가 사용
+                    )
+                
                 if itinerary:
                     itineraries.append(itinerary)
                     logger.info(
@@ -126,11 +144,18 @@ class SearchEngine:
                     )
                     for idx, seg in enumerate(itinerary.segments, 1):
                         logger.info(f"   [{idx}] {seg.from_airport} → {seg.to_airport}: {seg.price}원 (날짜: {seg.date})")
+                else:
+                    logger.warning(f"❌ 일정 구성 실패: 템플릿={' → '.join(template)}, 출발일={dep_date}, 귀국일={ret_date}")
 
+        logger.info(f"📊 생성된 일정 수: {len(itineraries)}개")
+        
         # 5. 최저가 일정 선택
         cheapest = self.price_aggregator.find_cheapest_itinerary(itineraries)
         if not cheapest:
+            logger.warning("⚠️ 생성된 일정이 없음, 직항 응답 반환")
             return await self._create_direct_response(request)
+        
+        logger.info(f"💰 최저가 일정 선택: {cheapest.get_route_pattern()}, 비용: {cheapest.total_cost}원, 세그먼트 수: {len(cheapest.segments)}개")
 
         # 6. 직항 가격과 비교
         direct_cost = await self._get_direct_cost(request)
@@ -145,8 +170,13 @@ class SearchEngine:
             if seg and seg.date and seg.from_airport and seg.to_airport
         ]
         
+        logger.info(f"🔍 세그먼트 검증: 원본 {len(cheapest.segments)}개 → 유효 {len(valid_segments)}개")
+        
         if not valid_segments:
-            logger.warning("⚠️ 유효한 세그먼트가 없음, 직항 응답 반환")
+            logger.error(f"❌ 유효한 세그먼트가 없음! 원본 세그먼트 정보:")
+            for idx, seg in enumerate(cheapest.segments, 1):
+                logger.error(f"   [{idx}] 세그먼트: {seg}, date={seg.date if seg else 'None'}, from={seg.from_airport if seg else 'None'}, to={seg.to_airport if seg else 'None'}")
+            logger.warning("⚠️ 직항 응답 반환")
             return await self._create_direct_response(request)
         
         return SearchResponse(

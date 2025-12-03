@@ -73,6 +73,16 @@ class PriceAggregator:
                     to_airport=to_airport,
                     flight_date=current_date,
                 )
+                if not segment:
+                    # 날짜 엄격 매칭 실패 시, 해당 구간의 모든 세그먼트 확인
+                    all_segments = self.graph.get_segments(from_airport, to_airport)
+                    logger.warning(
+                        f"⚠️ 날짜 엄격 매칭 실패: {from_airport} → {to_airport}, 요청 날짜: {current_date}, "
+                        f"그래프에 있는 세그먼트 수: {len(all_segments)}개"
+                    )
+                    if all_segments:
+                        available_dates = [str(s.date) for s in all_segments[:5]]
+                        logger.warning(f"   사용 가능한 날짜 예시: {', '.join(available_dates)}")
             else:
                 segment = self.graph.get_cheapest_segment(
                     from_airport=from_airport,
@@ -85,6 +95,7 @@ class PriceAggregator:
 
             if not segment:
                 # 해당 날짜/구간에 세그먼트가 없으면 일정 실패
+                logger.error(f"❌ 세그먼트 없음: {from_airport} → {to_airport}, 날짜: {current_date}")
                 return None
 
             # 원본 세그먼트 불변성 유지 → 복사본 생성
