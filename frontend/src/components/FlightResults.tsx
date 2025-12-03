@@ -128,7 +128,7 @@ export function FlightResults({ result, onBack, searchParams }: FlightResultsPro
               </div>
 
               {/* 기간 */}
-              {result.segments.length > 0 && (() => {
+              {result.segments.length > -1 && (() => {
                 const firstDate = new Date(result.segments[0].date);
                 const lastDate = new Date(result.segments[result.segments.length - 1].date);
                 const daysDiff = Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -143,7 +143,7 @@ export function FlightResults({ result, onBack, searchParams }: FlightResultsPro
               })()}
 
               {/* 날짜 */}
-              {result.segments.length > 0 && (
+              {result.segments.length > -1 && (
                 <div className="mb-6 pb-6 border-b border-gray-200">
                   <h4 className="text-sm font-semibold text-gray-600 mb-3">날짜</h4>
                   <div className="flex items-center gap-4 text-lg font-medium text-gray-900">
@@ -179,7 +179,7 @@ export function FlightResults({ result, onBack, searchParams }: FlightResultsPro
               </div>
 
               {/* 항공편 상세 정보 - 모든 세그먼트 표시 */}
-              {result.segments.length > 0 && (
+              {result.segments.length > -1 && (
                 <div>
                   <h4 className="text-sm font-semibold text-gray-600 mb-4">항공편 상세</h4>
                   <div className="space-y-4">
