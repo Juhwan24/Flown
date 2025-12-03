@@ -47,7 +47,7 @@ class AmadeusProvider:
         if not self.access_token:
             try:
                 # OAuth 2.0 토큰 요청
-                token_url = f"{self.base_url}/v1/security/oauth2/token"
+                token_url = f"https://{self.base_url}/v1/security/oauth2/token"
                 data = {
                     "grant_type": "client_credentials",
                     "client_id": self.api_key,
@@ -114,7 +114,7 @@ class AmadeusProvider:
                 return []
             
             # Flight Offers Search API 호출
-            search_url = f"{self.base_url}/v2/shopping/flight-offers"
+            search_url = f"https://{self.base_url}/v2/shopping/flight-offers"
             date_str = DateUtils.format_date_for_api(departure_date)
             
             params = {
