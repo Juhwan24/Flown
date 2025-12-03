@@ -4,12 +4,15 @@
 """
 from __future__ import annotations
 
+import logging
 from typing import List, Optional
 from datetime import date, timedelta
 
 from app.models.flight_segment import FlightSegment
 from app.models.itinerary import Itinerary
 from app.services.flight_graph import FlightGraph
+
+logger = logging.getLogger(__name__)
 
 
 class PriceAggregator:
@@ -21,8 +24,6 @@ class PriceAggregator:
     def calculate_total_cost(self, segments: List[FlightSegment]) -> int:
         """세그먼트 리스트의 총 가격 계산"""
         total = sum(segment.price for segment in segments)
-        import logging
-        logger = logging.getLogger(__name__)
         logger.info(f"💰 총 비용 계산: {len(segments)}개 세그먼트, 총액: {total}원")
         for idx, seg in enumerate(segments, 1):
             logger.info(f"   [{idx}] {seg.from_airport} → {seg.to_airport}: {seg.price}원")
@@ -105,8 +106,6 @@ class PriceAggregator:
             segments.append(segment_copy)
             
             # 디버깅: 각 세그먼트 가격 로깅
-            import logging
-            logger = logging.getLogger(__name__)
             logger.info(f"🔗 일정 구성 세그먼트 [{len(segments)}]: {from_airport} → {to_airport}, 가격: {segment_copy.price}원, 날짜: {current_date}")
 
             # 다음 세그먼트 날짜 계산
