@@ -71,17 +71,41 @@ interface FlightResultsProps {
 }
 
 export function FlightResults({ result, onBack, searchParams }: FlightResultsProps) {
+  // 디버깅: API 응답 데이터 확인
+  console.log('🔍 FlightResults - API 응답 데이터:', {
+    segments: result.segments,
+    segmentsLength: result.segments?.length,
+    firstSegment: result.segments?.[0],
+    lastSegment: result.segments?.[result.segments?.length - 1],
+  });
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ko-KR').format(price);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+  const formatDate = (dateString: string | Date) => {
+    try {
+      // 문자열이면 그대로 사용, Date 객체면 ISO 문자열로 변환
+      const date = typeof dateString === 'string' 
+        ? new Date(dateString) 
+        : dateString instanceof Date 
+        ? dateString 
+        : new Date(String(dateString));
+      
+      if (isNaN(date.getTime())) {
+        console.warn('⚠️ 잘못된 날짜 형식:', dateString);
+        return String(dateString);
+      }
+      
+      return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch (error) {
+      console.error('날짜 포맷팅 오류:', error, dateString);
+      return String(dateString);
+    }
   };
 
   return (
@@ -128,37 +152,74 @@ export function FlightResults({ result, onBack, searchParams }: FlightResultsPro
               </div>
 
               {/* 기간 */}
-              {result.segments && result.segments.length > 0 && result.segments[0]?.date && result.segments[result.segments.length - 1]?.date && (() => {
-                const firstDate = new Date(result.segments[0].date);
-                const lastDate = new Date(result.segments[result.segments.length - 1].date);
-                const daysDiff = Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
-                return (
-                  <div className="mb-6 -pb6 border-b border-gray-200">
-                    <h4 className="text-sm font-semibold text-gray-600 mb-3">기간</h4>
-                    <p className="text-lg font-medium text-gray-900">
-                      {daysDiff}박 {daysDiff + 1}일
-                    </p>
-                  </div>
-                );
+              {result.segments && result.segments.length > 0 && (() => {
+                const firstSegment = result.segments[0];
+                const lastSegment = result.segments[result.segments.length - 1];
+                
+                // date 필드가 있는지 확인 (문자열 또는 Date 객체 모두 허용)
+                const hasFirstDate = firstSegment?.date !== undefined && firstSegment?.date !== null;
+                const hasLastDate = lastSegment?.date !== undefined && lastSegment?.date !== null;
+                
+                if (!hasFirstDate || !hasLastDate) {
+                  console.warn('⚠️ 날짜 정보 없음:', { firstSegment, lastSegment });
+                  return null;
+                }
+                
+                try {
+                  const firstDate = new Date(firstSegment.date);
+                  const lastDate = new Date(lastSegment.date);
+                  
+                  if (isNaN(firstDate.getTime()) || isNaN(lastDate.getTime())) {
+                    console.warn('⚠️ 잘못된 날짜 형식:', { firstDate: firstSegment.date, lastDate: lastSegment.date });
+                    return null;
+                  }
+                  
+                  const daysDiff = Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
+                  
+                  return (
+                    <div className="mb-6 pb-6 border-b border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-600 mb-3">기간</h4>
+                      <p className="text-lg font-medium text-gray-900">
+                        {daysDiff}박 {daysDiff + 1}일
+                      </p>
+                    </div>
+                  );
+                } catch (error) {
+                  console.error('기간 계산 오류:', error);
+                  return null;
+                }
               })()}
 
               {/* 날짜 */}
-              {result.segments && result.segments.length > 0 && result.segments[0]?.date && result.segments[result.segments.length - 1]?.date && (
-                <div className="mb-6 pb-6 border-b border-gray-200">
-                  <h4 className="text-sm font-semibold text-gray-600 mb-3">날짜</h4>
-                  <div className="flex items-center gap-4 text-lg font-medium text-gray-900">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-blue-600" />
-                      <span>출발: {formatDate(result.segments[0].date)}</span>
-                    </div>
-                    <span className="text-gray-400">→</span>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-blue-600" />
-                      <span>귀국: {formatDate(result.segments[result.segments.length - 1].date)}</span>
+              {result.segments && result.segments.length > 0 && (() => {
+                const firstSegment = result.segments[0];
+                const lastSegment = result.segments[result.segments.length - 1];
+                
+                // date 필드가 있는지 확인
+                const hasFirstDate = firstSegment?.date !== undefined && firstSegment?.date !== null;
+                const hasLastDate = lastSegment?.date !== undefined && lastSegment?.date !== null;
+                
+                if (!hasFirstDate || !hasLastDate) {
+                  return null;
+                }
+                
+                return (
+                  <div className="mb-6 pb-6 border-b border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-600 mb-3">날짜</h4>
+                    <div className="flex items-center gap-4 text-lg font-medium text-gray-900">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-blue-600" />
+                        <span>출발: {formatDate(firstSegment.date)}</span>
+                      </div>
+                      <span className="text-gray-400">→</span>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-blue-600" />
+                        <span>귀국: {formatDate(lastSegment.date)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* 가격 */}
               <div className="mb-6 pb-6 border-b border-gray-200">
@@ -184,9 +245,14 @@ export function FlightResults({ result, onBack, searchParams }: FlightResultsPro
                   <h4 className="text-sm font-semibold text-gray-600 mb-4">항공편 상세</h4>
                   <div className="space-y-4">
                     {result.segments.map((segment, index) => {
-                      if (!segment || !segment.date) {
+                      if (!segment) {
+                        console.warn(`⚠️ 세그먼트 ${index}가 null 또는 undefined입니다`);
                         return null;
                       }
+                      
+                      // date가 없어도 다른 정보는 표시 (date는 선택적으로 표시)
+                      const hasDate = segment.date !== undefined && segment.date !== null;
+                      
                       return (
                         <div
                           key={index}
@@ -213,10 +279,12 @@ export function FlightResults({ result, onBack, searchParams }: FlightResultsPro
                                 
                                 {/* 날짜 및 시간 정보 */}
                                 <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="w-4 h-4" />
-                                    <span>{formatDate(segment.date)}</span>
-                                  </div>
+                                  {hasDate && (
+                                    <div className="flex items-center gap-1">
+                                      <Calendar className="w-4 h-4" />
+                                      <span>{formatDate(segment.date)}</span>
+                                    </div>
+                                  )}
                                   {segment.departure_time && (
                                     <div className="flex items-center gap-1">
                                       <span className="font-medium">출발:</span>
@@ -233,6 +301,12 @@ export function FlightResults({ result, onBack, searchParams }: FlightResultsPro
                                     <div className="flex items-center gap-1">
                                       <span className="font-medium">편명:</span>
                                       <span>{segment.flight_number}</span>
+                                    </div>
+                                  )}
+                                  {segment.provider && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="font-medium">제공자:</span>
+                                      <span>{segment.provider}</span>
                                     </div>
                                   )}
                                 </div>
