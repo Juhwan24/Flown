@@ -128,7 +128,7 @@ export function FlightResults({ result, onBack, searchParams }: FlightResultsPro
               </div>
 
               {/* 기간 */}
-              {result.segments.length > -1 && (() => {
+              {result.segments && result.segments.length > 0 && result.segments[0]?.date && result.segments[result.segments.length - 1]?.date && (() => {
                 const firstDate = new Date(result.segments[0].date);
                 const lastDate = new Date(result.segments[result.segments.length - 1].date);
                 const daysDiff = Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -143,7 +143,7 @@ export function FlightResults({ result, onBack, searchParams }: FlightResultsPro
               })()}
 
               {/* 날짜 */}
-              {result.segments.length > -1 && (
+              {result.segments && result.segments.length > 0 && result.segments[0]?.date && result.segments[result.segments.length - 1]?.date && (
                 <div className="mb-6 pb-6 border-b border-gray-200">
                   <h4 className="text-sm font-semibold text-gray-600 mb-3">날짜</h4>
                   <div className="flex items-center gap-4 text-lg font-medium text-gray-900">
@@ -179,74 +179,79 @@ export function FlightResults({ result, onBack, searchParams }: FlightResultsPro
               </div>
 
               {/* 항공편 상세 정보 - 모든 세그먼트 표시 */}
-              {result.segments.length > -1 && (
+              {result.segments && result.segments.length > 0 && (
                 <div>
                   <h4 className="text-sm font-semibold text-gray-600 mb-4">항공편 상세</h4>
                   <div className="space-y-4">
-                    {result.segments.map((segment, index) => (
-                      <div
-                        key={index}
-                        className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4 flex-1">
-                            <div className="flex-shrink-0">
-                              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                                <Plane className="w-6 h-6 text-blue-600" />
-                              </div>
-                            </div>
-                            <div className="flex-1">
-                              {/* 출발지 → 도착지 */}
-                              <div className="flex items-center gap-3 mb-2">
-                                <span className="text-xl font-bold text-gray-900">
-                                  {segment.from_airport}
-                                </span>
-                                <span className="text-gray-400">→</span>
-                                <span className="text-xl font-bold text-gray-900">
-                                  {segment.to_airport}
-                                </span>
-                              </div>
-                              
-                              {/* 날짜 및 시간 정보 */}
-                              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="w-4 h-4" />
-                                  <span>{formatDate(segment.date)}</span>
+                    {result.segments.map((segment, index) => {
+                      if (!segment || !segment.date) {
+                        return null;
+                      }
+                      return (
+                        <div
+                          key={index}
+                          className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 flex-1">
+                              <div className="flex-shrink-0">
+                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <Plane className="w-6 h-6 text-blue-600" />
                                 </div>
-                                {segment.departure_time && (
-                                  <div className="flex items-center gap-1">
-                                    <span className="font-medium">출발:</span>
-                                    <span>{segment.departure_time}</span>
-                                  </div>
-                                )}
-                                {segment.arrival_time && (
-                                  <div className="flex items-center gap-1">
-                                    <span className="font-medium">도착:</span>
-                                    <span>{segment.arrival_time}</span>
-                                  </div>
-                                )}
-                                {segment.flight_number && (
-                                  <div className="flex items-center gap-1">
-                                    <span className="font-medium">편명:</span>
-                                    <span>{segment.flight_number}</span>
-                                  </div>
-                                )}
                               </div>
-                              
-                              
+                              <div className="flex-1">
+                                {/* 출발지 → 도착지 */}
+                                <div className="flex items-center gap-3 mb-2">
+                                  <span className="text-xl font-bold text-gray-900">
+                                    {segment.from_airport}
+                                  </span>
+                                  <span className="text-gray-400">→</span>
+                                  <span className="text-xl font-bold text-gray-900">
+                                    {segment.to_airport}
+                                  </span>
+                                </div>
+                                
+                                {/* 날짜 및 시간 정보 */}
+                                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-4 h-4" />
+                                    <span>{formatDate(segment.date)}</span>
+                                  </div>
+                                  {segment.departure_time && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="font-medium">출발:</span>
+                                      <span>{segment.departure_time}</span>
+                                    </div>
+                                  )}
+                                  {segment.arrival_time && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="font-medium">도착:</span>
+                                      <span>{segment.arrival_time}</span>
+                                    </div>
+                                  )}
+                                  {segment.flight_number && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="font-medium">편명:</span>
+                                      <span>{segment.flight_number}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                
+                              </div>
                             </div>
-                          </div>
-                          
-                          {/* 가격 정보 */}
-                          <div className="text-right">
-                            <p className="text-sm text-gray-600 mb-1"></p>
-                            <p className="text-xl font-bold text-blue-600">
-                              {formatPrice(segment.price)}원
-                            </p>
+                            
+                            {/* 가격 정보 */}
+                            <div className="text-right">
+                              <p className="text-sm text-gray-600 mb-1"></p>
+                              <p className="text-xl font-bold text-blue-600">
+                                {formatPrice(segment.price)}원
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

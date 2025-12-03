@@ -138,10 +138,20 @@ class SearchEngine:
             cheapest, direct_cost
         )
 
-        # 7. 응답 생성
+        # 7. 응답 생성 (segments 검증)
+        # segments 배열에서 유효하지 않은 세그먼트 필터링
+        valid_segments = [
+            seg for seg in cheapest.segments 
+            if seg and seg.date and seg.from_airport and seg.to_airport
+        ]
+        
+        if not valid_segments:
+            logger.warning("⚠️ 유효한 세그먼트가 없음, 직항 응답 반환")
+            return await self._create_direct_response(request)
+        
         return SearchResponse(
             total_cost=cheapest.total_cost,
-            segments=cheapest.segments,
+            segments=valid_segments,
             route_pattern=cheapest.get_route_pattern(),
             cheaper_than_direct=cheaper_than_direct,
             direct_cost=direct_cost
