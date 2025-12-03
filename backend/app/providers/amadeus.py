@@ -24,9 +24,9 @@ class AmadeusProvider:
     """Amadeus API 프로바이더"""
     
     def __init__(self):
-        self.api_key = settings.amadeus_api_key
-        self.api_secret = settings.amadeus_api_secret
-        self.base_url = settings.amadeus_base_url
+        self.api_key = "8xRaCxhyujnqMdLZLgoWawd8aQqAcYfU"
+        self.api_secret ="Xy2e31cWqZVGD5KE"
+        self.base_url = "test.api.amadeus.com"
         self.access_token: Optional[str] = None
         
         # 초기화 로깅
